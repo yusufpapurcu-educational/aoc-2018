@@ -63,7 +63,7 @@ func (f *fabric) addClaim(id, x, y, w, h int) {
 // Bu method kesisim sayma icin. Aciklama geregi duymuyorum
 func (f *fabric) countClaim() {
 	counter := 0
-	for i, _ := range f.m {
+	for i := range f.m {
 		if f.m[i] > 1 {
 			counter++
 		}
