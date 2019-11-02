@@ -26,8 +26,9 @@ func main() {
 	}
 	defer f.Close()
 	s := bufio.NewScanner(f)
-	var guardName, day, sleeptime = 0, 0, 0
+	var guardName, day, start, laps = 0, 0, 0, 0
 	var days = make(map[int]int)
+	var isSleep bool
 	for s.Scan() {
 		var time, minute int
 		text := s.Text()
@@ -37,6 +38,12 @@ func main() {
 		}
 		switch string(text[19:24]) {
 		case "Guard":
+			fmt.Println(guardName, laps)
+			if guardName != 0 {
+				for i := 0; i < 60-laps; i++ {
+					shafts[specs{guardName, day, laps + i}] = 0
+				}
+			}
 			days[guardName]++
 			_, err := fmt.Sscanf(string(text[25:]), "#%d begins shift", &guardName)
 			if err != nil {
@@ -44,16 +51,32 @@ func main() {
 			}
 
 			day = days[guardName]
+			laps = 0
+			start = 0
 			break
 		case "falls":
-			sleeptime = minute
-
+			if !isSleep {
+				if start > minute {
+					minute += 60
+				}
+				fmt.Println("Waken minute : ", minute-start)
+				isSleep = true
+				laps += minute - start
+				start = minute % 60
+			}
 			break
 		case "wakes":
-
-			fmt.Println("Wakes minute : ", minute-sleeptime)
-			for i := sleeptime; i < minute; i++ {
-				shafts[specs{guardName, day, i}] = 1
+			if isSleep {
+				if start > minute {
+					minute += 60
+				}
+				fmt.Println("Sleep minute : ", minute-start)
+				for i := 0; i < minute-start; i++ {
+					shafts[specs{guardName, day, laps + i}] = 1
+				}
+				laps += minute - start
+				start = minute % 60
+				isSleep = false
 			}
 			break
 		}
@@ -62,19 +85,19 @@ func main() {
 	// 	shafts[specs{guardName, day, laps + i}] = 0
 	// }
 	days[guardName]++
-	for i := range days {
-		for c := 0; c < days[i]; c++ {
-			fmt.Print(i, "  =  ", c, "     ")
-			for b := 0; b < 60; b++ {
-				if shafts[specs{i, c, b}] == 1 {
-					fmt.Print("#")
-				} else {
-					fmt.Print(".")
-				}
-			}
-			fmt.Println()
-		}
-	}
+	// for i := range days {
+	// 	for c := 0; c < days[i]; c++ {
+	// 		fmt.Print(i, "  =  ", c, "     ")
+	// 		for b := 0; b < 60; b++ {
+	// 			if shafts[specs{i, c, b}] == 1 {
+	// 				fmt.Print("#")
+	// 			} else {
+	// 				fmt.Print(".")
+	// 			}
+	// 		}
+	// 		fmt.Println()
+	// 	}
+	// }
 	sleeper := make(map[int]int)
 	sleepermin := make(map[guard]int)
 	for i := range days {
@@ -90,19 +113,30 @@ func main() {
 			}
 		}
 	}
-	mostSleeper := 0
+	var mostg, mostd int
+	for i := range days {
+		for b := 0; b < 60; b++ {
+			if sleepermin[guard{i, b}] >= sleepermin[guard{mostg, mostd}] {
+				mostg = i
+				mostd = b
+			}
+		}
+	}
+	var mostSleeper, mostSleepedMin int
 	for i := range sleeper {
-		if sleeper[i] > sleeper[mostSleeper] {
+		if sleeper[i] >= sleeper[mostSleeper] {
 			mostSleeper = i
 		}
 	}
-	fmt.Println(mostSleeper)
-	mostSleepedMin := 0
 	for i := 0; i < 60; i++ {
-		if sleepermin[guard{mostSleeper, mostSleepedMin}] < sleepermin[guard{mostSleeper, i}] {
+		if sleepermin[guard{mostSleeper, mostSleepedMin}] <= sleepermin[guard{mostSleeper, i}] {
 			mostSleepedMin = i
 		}
 	}
-	fmt.Println(mostSleepedMin)
-	fmt.Println(mostSleepedMin * mostSleeper)
+	// for i := 0; i < 60; i++ {
+	// 	fmt.Println(mostSleeper, "-", i, " : ", sleepermin[guard{mostSleeper, i}])
+	// }
+	fmt.Println(mostSleeper, mostSleepedMin, mostSleepedMin*mostSleeper)
+	fmt.Println(mostg, mostd, mostg*mostd)
+
 }
