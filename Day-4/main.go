@@ -7,18 +7,27 @@ import (
 	"os"
 )
 
-var guards = make(map[int]guard)
+type specs struct {
+	guardName int
+	day       int
+	min       int
+}
+type guard struct {
+	guardName int
+	minute    int
+}
 
-type guard [][]int
+var shafts = make(map[specs]int)
 
 func main() {
-	f, err := os.Open("test.txt")
+	f, err := os.Open("input.txt")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer f.Close()
 	s := bufio.NewScanner(f)
-	var guardName, oldGuardName, day, start int
+	var guardName, day, sleeptime = 0, 0, 0
+	var days = make(map[int]int)
 	for s.Scan() {
 		var time, minute int
 		text := s.Text()
@@ -28,44 +37,72 @@ func main() {
 		}
 		switch string(text[19:24]) {
 		case "Guard":
-			fmt.Println("Guard Change")
+			days[guardName]++
 			_, err := fmt.Sscanf(string(text[25:]), "#%d begins shift", &guardName)
 			if err != nil {
 				log.Fatal(err)
 			}
-			start = minute
+
+			day = days[guardName]
 			break
 		case "falls":
-			fmt.Println("falls")
-			Awaken(minute-start-1, guardName, day)
-			start = minute
+			sleeptime = minute
 
 			break
 		case "wakes":
-			fmt.Println("Wakes")
-			start = minute
 
+			fmt.Println("Wakes minute : ", minute-sleeptime)
+			for i := sleeptime; i < minute; i++ {
+				shafts[specs{guardName, day, i}] = 1
+			}
 			break
 		}
-		if guardName != oldGuardName {
-			if guards[guardName] == nil {
-				day = 0
-				guards[guardName][0] = make([]int, 60)
-			} else {
-				day = len(guards[guardName][day])
+	}
+	// for i := 0; i < 60-laps; i++ {
+	// 	shafts[specs{guardName, day, laps + i}] = 0
+	// }
+	days[guardName]++
+	for i := range days {
+		for c := 0; c < days[i]; c++ {
+			fmt.Print(i, "  =  ", c, "     ")
+			for b := 0; b < 60; b++ {
+				if shafts[specs{i, c, b}] == 1 {
+					fmt.Print("#")
+				} else {
+					fmt.Print(".")
+				}
 			}
-
-			oldGuardName = guardName
+			fmt.Println()
 		}
 	}
-	fmt.Println(guards[99][0])
-}
-
-func Awaken(take, guardName, day int) {
-	list := guards[guardName][day]
-	for i := 0; i <= take; i++ {
-		list[i] = 1
+	sleeper := make(map[int]int)
+	sleepermin := make(map[guard]int)
+	for i := range days {
+		// I guard Name
+		for c := 0; c < days[i]; c++ {
+			// C day name
+			for b := 0; b < 60; b++ {
+				// B minute
+				if shafts[specs{i, c, b}] == 1 {
+					sleeper[i]++
+					sleepermin[guard{i, b}]++
+				}
+			}
+		}
 	}
-	fmt.Println(list)
-	guards[guardName][day] = (list)
+	mostSleeper := 0
+	for i := range sleeper {
+		if sleeper[i] > sleeper[mostSleeper] {
+			mostSleeper = i
+		}
+	}
+	fmt.Println(mostSleeper)
+	mostSleepedMin := 0
+	for i := 0; i < 60; i++ {
+		if sleepermin[guard{mostSleeper, mostSleepedMin}] < sleepermin[guard{mostSleeper, i}] {
+			mostSleepedMin = i
+		}
+	}
+	fmt.Println(mostSleepedMin)
+	fmt.Println(mostSleepedMin * mostSleeper)
 }
